@@ -5,9 +5,11 @@
 @endsection
 
 @section('css')
-    <link rel="stylesheet" href="{{ asset('css/auth-login.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}">
 @endsection
 
 @section('content')
-
+    <header>
+        <div class="top-page">< お知らせ ></div>
+    </header>
 @endsection

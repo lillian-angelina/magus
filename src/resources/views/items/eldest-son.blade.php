@@ -9,13 +9,13 @@
 @endsection
 
 @section('content')
-<div class="brothers-container">
-    <h1 class="brothers-title">メーガス4兄弟紹介</h1>
-    <div class="brothers-list">
-        <div class="brother-item">
-            <h2 class="brother-name">長男</h2>
-            <p class="brother-description"></p>
+    <div class="brothers-container">
+        <h1 class="brothers-title">メーガス4兄弟紹介</h1>
+        <div class="brothers-list">
+            <div class="brother-item">
+                <h2 class="brother-name">長男(siv)</h2>
+                <p class="brother-description">ギター担当</p>
+            </div>
         </div>
     </div>
-</div>
 @endsection

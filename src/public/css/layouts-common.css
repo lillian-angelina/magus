@@ -1,0 +1,42 @@
+body {
+    width: 100vw;
+    height: 100vh;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    overflow: hidden;
+    width: 80%;
+    margin-inline-start: auto;
+    margin-inline-end: auto;
+}
+
+.herder {
+    width: 100%;
+}
+
+.header-h {
+    margin: 20px 0;
+}
+
+.list {
+    margin: 20px 0;
+}
+
+.home {
+    text-decoration: none;
+    color: #4c00ff;
+    font-size: 32px;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+.list-item {
+    text-decoration: none;
+    color: #0400ff;
+    font-size: 20px;
+    margin-left: 20px;
+}

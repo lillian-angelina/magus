@@ -13,8 +13,8 @@
     <h1 class="brothers-title">メーガス4兄弟紹介</h1>
     <div class="brothers-list">
         <div class="brother-item">
-            <h2 class="brother-name">四男</h2>
-            <p class="brother-description"></p>
+            <h2 class="brother-name">四男(能太郎ちゃん)</h2>
+            <p class="brother-description">ベース担当</p>
         </div>
     </div>
 </div>

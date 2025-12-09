@@ -12,15 +12,14 @@
 </head>
 
 <body>
-    <header>
-        <nav>
-            <ul>
-                <li><a href="{{ url('/') }}">ホーム</a></li>
-                <li><a href="{{ url('/about') }}">メーガス4兄弟</a></li>
-                <li><a href="{{ url('/brothers') }}">兄弟紹介</a></li>
-                <li><a href="{{ url('/contact') }}">お問い合わせ</a></li>
-            </ul>
-        </nav>
+    <header class="header">
+        <div class="header-h">
+            <a class="home" href="{{ url('/') }}">メーガス4兄弟</a>
+        </div>
+        <div class="list">
+            <a class="list-item" href="{{ url('/brothers') }}">兄弟紹介</a>
+            <a class="list-item" href="{{ url('/contact') }}">お問い合わせ</a>
+        </div>
     </header>
 
     <main>

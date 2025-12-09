@@ -32,8 +32,8 @@ class MainController extends Controller
         return view('items.third-son');
     }
 
-    public function fouthSon()
+    public function fourthSon()
     {
-        return view('items.fouth-son');
+        return view('items.fourth-son');
     }
 }
