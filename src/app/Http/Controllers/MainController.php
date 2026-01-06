@@ -36,4 +36,14 @@ class MainController extends Controller
     {
         return view('items.fourth-son');
     }
+
+    public function contact()
+    {
+        return view('items.contact');
+    }
+
+    public function tabIndex()
+    {
+        return view('items.tab-index');
+    }
 }

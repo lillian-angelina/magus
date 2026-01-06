@@ -12,4 +12,5 @@
     <header>
         <div class="top-page">< お知らせ ></div>
     </header>
+    <script src="{{ asset('js/main.js') }}"></script>
 @endsection

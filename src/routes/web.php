@@ -9,6 +9,7 @@ Route::get('/eldest-son', [MainController::class, 'eldestSon'] )->name('items.el
 Route::get('/second-son', [MainController::class, 'secondSon'] )->name('items.secondSon');
 Route::get('/third-son', [MainController::class, 'thirdSon'] )->name('items.thirdSon');
 Route::get('/fourth-son', [MainController::class, 'fourthSon'] )->name('items.fourthSon');
+Route::get('/items', [MainController::class, 'tabIndex'] )->name('items.tabIndex');
 Route::get('/contact', function () {
     return view('items.contact');
 })->name('items.contact');

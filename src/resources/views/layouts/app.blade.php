@@ -18,6 +18,7 @@
         </div>
         <div class="list">
             <a class="list-item" href="{{ url('/brothers') }}">兄弟紹介</a>
+            <a class="list-item" href="{{ url('/items') }}">TAB譜</a>
             <a class="list-item" href="{{ url('/contact') }}">お問い合わせ</a>
         </div>
     </header>

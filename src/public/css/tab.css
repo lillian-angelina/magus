@@ -1,0 +1,59 @@
+body {
+    background: #fff;
+    font-family: sans-serif;
+    padding-top: 100px;
+}
+
+.controls {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 15px;
+    border-bottom: 2px solid #f0f0f0;
+    z-index: 100;
+}
+
+#song-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.chord-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+    width: 110px;
+    transition: 0.2s;
+    padding: 5px;
+}
+
+.chord-name {
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.lyrics {
+    color: #d32f2f;
+    font-weight: bold;
+    font-size: 14px;
+    margin-top: 5px;
+    height: 1.2em;
+}
+
+.active {
+    background-color: #fff9c4;
+    border-radius: 5px;
+    transform: scale(1.05);
+}
+
+/* SVGサイズ調整 */
+.chord-svg {
+    width: 100px;
+    height: 80px;
+}
