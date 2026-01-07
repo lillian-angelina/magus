@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Song;
 use App\Http\Controllers\Controller;
+
 
 class MainController extends Controller
 {
     public function index()
     {
-        return view('items.index');
+        // DBから全件取得
+        $songs = \App\Models\Song::all();
+        return view('items.index', compact('songs'));
     }
 
     public function brothers()
