@@ -518,11 +518,10 @@
             } catch (error) { alert("保存に失敗しました"); }
         }
 
-        // --- PDFダウンロードロジック ---
-        // プレビューエリアを画像化し、それをPDFドキュメントに貼り付けて出力する
+        // --- 改ページ位置の自動調整対応 PDFダウンロードロジック ---
         async function downloadPDF() {
             const { jsPDF } = window.jspdf;
-            const element = document.getElementById('preview-area');
+            const previewArea = document.getElementById('preview-area');
             const title = document.getElementById('song-title').value || 'chord-sheet';
             const btn = document.querySelector('.btn-pdf');
 
@@ -530,16 +529,51 @@
             btn.disabled = true;
 
             try {
-                // 背景色を白にして高解像度で要素をキャンバスに描画
-                const canvas = await html2canvas(element, { scale: 2, backgroundColor: "#ffffff" });
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4'); // A4サイズでPDF作成
+                const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const margin = 10; // 上下左右の余白(mm)
+                const contentWidth = pdfWidth - (margin * 2);
 
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                // プレビュー内のすべての行要素を取得
+                const lines = previewArea.querySelectorAll('.line-container');
+                // タイトル（h1）も考慮
+                const titleElement = previewArea.querySelector('h1');
+
+                let currentY = margin; // PDF上の現在の描画位置
+
+                // --- タイトルの描画 ---
+                if (titleElement) {
+                    const canvas = await html2canvas(titleElement, { scale: 2 });
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgHeight = (canvas.height * contentWidth) / canvas.width;
+                    pdf.addImage(imgData, 'PNG', margin, currentY, contentWidth, imgHeight);
+                    currentY += imgHeight + 10; // タイトル後の余白
+                }
+
+                // --- 各行（line-container）をループして描画 ---
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const canvas = await html2canvas(line, { scale: 2, backgroundColor: "#ffffff" });
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+                    // **チェック：次のページへ行くべきか？**
+                    // 現在の位置 + 描画する行の高さ が ページ下端（余白含む）を超えた場合
+                    if (currentY + imgHeight > pdfHeight - margin) {
+                        pdf.addPage();
+                        currentY = margin; // 新しいページの先頭に戻る
+                    }
+
+                    pdf.addImage(imgData, 'PNG', margin, currentY, contentWidth, imgHeight);
+                    currentY += imgHeight + 5; // 行間の余白
+                }
+
                 pdf.save(`${title}.pdf`);
-            } catch (e) { alert("PDF生成に失敗しました"); }
+            } catch (e) {
+                console.error(e);
+                alert("PDF生成に失敗しました");
+            }
 
             btn.innerText = "PDFファイルをダウンロード";
             btn.disabled = false;

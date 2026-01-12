@@ -14,6 +14,12 @@ class SongController extends Controller
         return view('songs.index', compact('songs'));
     }
 
+    public function show(Song $song)
+    {
+        // 指定された ID の曲データを show.blade.php に渡す
+        return view('songs.show', compact('song'));
+    }
+
     // 保存（新規作成）
     public function store(Request $request)
     {

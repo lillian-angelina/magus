@@ -16,11 +16,15 @@ Route::get('/contact', function () {
     return view('items.contact');
 })->name('items.contact');
 
+// 一覧表示
 Route::get('/songs', [SongController::class, 'index'])->name('songs.index');
-Route::post('/songs', [SongController::class, 'store'])->name('songs.store'); // 新規保存
-Route::get('/songs/{id}/edit', [SongController::class, 'editor'])->name('songs.editor');
-Route::put('/songs/{id}', [SongController::class, 'update'])->name('songs.update'); // 更新
-Route::delete('/songs/{id}', [SongController::class, 'destroy'])->name('songs.destroy'); // 削除
-Route::get('/songs/create', function () {
-    return view('songs.create');
-})->name('songs.create');
+// 新規作成エディタ
+Route::get('/songs/create', [SongController::class, 'create'])->name('songs.create');
+// 編集エディタ（ID指定）
+Route::get('/songs/{song}/edit', [SongController::class, 'edit'])->name('songs.editor');
+// 詳細・プレビュー画面（今回追加するもの）
+Route::get('/songs/{song}', [SongController::class, 'show'])->name('songs.show');
+// 保存・更新・削除
+Route::post('/songs', [SongController::class, 'store'])->name('songs.store');
+Route::put('/songs/{song}', [SongController::class, 'update'])->name('songs.update');
+Route::delete('/songs/{song}', [SongController::class, 'destroy'])->name('songs.destroy');
