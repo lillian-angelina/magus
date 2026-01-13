@@ -31,7 +31,7 @@
             <td style="padding: 12px;">
                 <div style="display: flex; gap: 8px; justify-content: center;">
                     {{-- 編集ボタン --}}
-                    <a href="{{ route('songs.editor', $song->id) }}" 
+                    <a href="{{ route('songs.edit', $song->id) }}" 
                        style="background: #007bff; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 0.9em;">
                        編集
                     </a>

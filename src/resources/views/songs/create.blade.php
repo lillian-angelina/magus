@@ -453,6 +453,55 @@
             return `<svg class="chord-svg" viewBox="0 0 100 85">${elements}</svg>`;
         }
 
+        // --- TAB譜（ギターソロ）生成ロジック ---
+        function createTabSVG(tabInput) {
+            const width = 800;
+            const height = 150;
+            const stringSpacing = 15;
+            const startY = 30;
+            let elements = "";
+
+            // 6本の弦を描画
+            for (let i = 0; i < 6; i++) {
+                const y = startY + i * stringSpacing;
+                elements += `<line x1="40" y1="${y}" x2="${width}" y2="${y}" stroke="#888" stroke-width="1"/>`;
+            }
+
+            elements += `
+                <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+            `;
+
+            const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
+            let noteCount = 0;
+
+            notes.forEach((note) => {
+                const x = 70 + noteCount * 45;
+
+                // 小節線（|）の処理
+                if (note === '|') {
+                    elements += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${startY + 5 * stringSpacing}" stroke="#444" stroke-width="2"/>`;
+                    noteCount += 0.5; // 小節線は幅を少し狭く取る
+                    return;
+                }
+
+                const match = note.match(/^([1-6])([+-])(\d+|x)$/);
+                if (!match) return;
+
+                const stringNum = parseInt(match[1]);
+                const fret = match[3];
+                const y = startY + (stringNum - 1) * stringSpacing;
+
+                elements += `<rect x="${x - 7}" y="${y - 8}" width="14" height="16" fill="white"/>`;
+                elements += `<text x="${x}" y="${y + 5}" font-size="16" font-family="monospace" font-weight="bold" text-anchor="middle" fill="black">${fret}</text>`;
+
+                noteCount++;
+            });
+
+            return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; display:block; background:#fff; padding:10px;">${elements}</svg>`;
+        }
+
         // --- リアルタイムプレビュー更新 ---
         // 入力エリアのテキストを解析し、タイトルと全てのコード図をプレビューエリアに描画する
         function updatePreview() {
@@ -460,34 +509,64 @@
             const chordInput = document.getElementById('chord-input').value;
             const previewArea = document.getElementById('preview-area');
 
-            previewArea.innerHTML = ''; // プレビューを一度クリア
+            previewArea.innerHTML = '';
 
-            // プレビュー内にタイトルを表示
             const titleEl = document.createElement('h1');
             titleEl.style.textAlign = 'center';
             titleEl.style.marginBottom = '40px';
             titleEl.innerText = titleInput || 'Untitled';
             previewArea.appendChild(titleEl);
 
-            // 改行ごとに段落を分け、スペースごとにコード図を生成して並べる
             const lines = chordInput.split('\n');
             lines.forEach(line => {
-                if (!line.trim()) return;
+                const trimmedLine = line.trim();
+                if (!trimmedLine) return;
+
                 const lineDiv = document.createElement('div');
                 lineDiv.className = 'line-container';
-                const chordRow = document.createElement('div');
-                chordRow.className = 'chord-row';
-
-                line.trim().split(/\s+/).forEach(name => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'chord-item';
-                    // コードネームとその下の図解SVGをセット
-                    itemDiv.innerHTML = `<div class="chord-name">${name}</div>${createChordSVG(name)}`;
-                    chordRow.appendChild(itemDiv);
-                });
-                lineDiv.appendChild(chordRow);
                 previewArea.appendChild(lineDiv);
+
+                if (trimmedLine.startsWith('-')) {
+                    const tabData = trimmedLine.replace(/^-/, '').trim();
+                    lineDiv.innerHTML = createTabSVG(tabData);
+                } else {
+                    const chordRow = document.createElement('div');
+                    chordRow.className = 'chord-row';
+                    chordRow.style.display = 'flex';
+                    chordRow.style.alignItems = 'center'; // 垂直中央揃え
+                    chordRow.style.flexWrap = 'wrap';
+
+                    trimmedLine.split(/\s+/).forEach(name => {
+                        if (!name) return;
+
+                        if (name === '|') {
+                            // 小節線の描画
+                            const bar = document.createElement('div');
+                            bar.style.width = '2px';
+                            bar.style.height = '80px';
+                            bar.style.backgroundColor = '#ddd';
+                            bar.style.margin = '0 15px';
+                            chordRow.appendChild(bar);
+                        } else {
+                            // 通常のコード図
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'chord-item';
+                            itemDiv.innerHTML = `<div class="chord-name">${name}</div>${createChordSVG(name)}`;
+                            chordRow.appendChild(itemDiv);
+                        }
+                    });
+                    lineDiv.appendChild(chordRow);
+                }
             });
+        }
+
+        // TAB譜バッファを画面に描画する補助関数
+        function renderTabBuffer(buffer, container) {
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'line-container tab-container';
+            lineDiv.style.overflowX = 'auto';
+            lineDiv.innerHTML = createTabSVG(buffer);
+            container.appendChild(lineDiv);
         }
 
         // --- DB保存ロジック ---

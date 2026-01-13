@@ -16,7 +16,6 @@ class SongController extends Controller
 
     public function show(Song $song)
     {
-        // 指定された ID の曲データを show.blade.php に渡す
         return view('songs.show', compact('song'));
     }
 
@@ -31,11 +30,18 @@ class SongController extends Controller
         return response()->json(['message' => '新しく保存しました！', 'id' => $song->id]);
     }
 
-    // 編集画面表示
-    public function editor($id)
+    public function create()
     {
-        $song = Song::findOrFail($id); // IDからデータを取得
-        return view('songs.editor', compact('song')); // ビューに $song を渡す
+        // 新規作成時は $song が存在しないため、空のモデルを渡すとビューでエラーが出ません
+        $song = new Song();
+        return view('songs.edit', compact('song'));
+    }
+
+    // 編集画面表示
+    public function edit($id)
+    {
+        $song = Song::findOrFail($id);
+        return view('songs.edit', compact('song'));
     }
 
     // 更新（上書き保存）

@@ -409,24 +409,105 @@
             return `<svg class="chord-svg" viewBox="0 0 100 85">${elements}</svg>`;
         }
 
+        // --- TAB譜（ギターソロ）生成ロジック ---
+        function createTabSVG(tabInput) {
+            const width = 800;
+            const height = 150;
+            const stringSpacing = 15;
+            const startY = 30;
+            let elements = "";
+
+            // 6本の弦を描画
+            for (let i = 0; i < 6; i++) {
+                const y = startY + i * stringSpacing;
+                elements += `<line x1="40" y1="${y}" x2="${width}" y2="${y}" stroke="#888" stroke-width="1"/>`;
+            }
+
+            elements += `
+                    <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                    <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                    <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+                    `;
+
+            const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
+            let noteCount = 0;
+
+            notes.forEach((note) => {
+                const x = 70 + noteCount * 45;
+
+                // 小節線（|）の処理
+                if (note === '|') {
+                    elements += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${startY + 5 * stringSpacing}" stroke="#444" stroke-width="2"/>`;
+                    noteCount += 0.5; // 小節線は幅を少し狭く取る
+                    return;
+                }
+
+                const match = note.match(/^([1-6])([+-])(\d+|x)$/);
+                if (!match) return;
+
+                const stringNum = parseInt(match[1]);
+                const fret = match[3];
+                const y = startY + (stringNum - 1) * stringSpacing;
+
+                elements += `<rect x="${x - 7}" y="${y - 8}" width="14" height="16" fill="white"/>`;
+                elements += `<text x="${x}" y="${y + 5}" font-size="16" font-family="monospace" font-weight="bold" text-anchor="middle" fill="black">${fret}</text>`;
+
+                noteCount++;
+            });
+
+return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; display:block; background:#fff; padding:10px 0;">${elements}</svg>`;}
+
+        // TAB譜バッファを画面に描画する補助関数
+        function renderTabBuffer(buffer, container) {
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'line-container tab-container';
+            lineDiv.style.overflowX = 'hidden'; // auto から hidden に変更
+            lineDiv.style.width = '100%';       // 幅を親要素に合わせる
+            lineDiv.innerHTML = createTabSVG(buffer);
+            container.appendChild(lineDiv);
+        }
+
         // --- プレビュー生成 (ページ読み込み時に実行) ---
         function renderPreview() {
             const previewArea = document.getElementById('preview-area');
             const lines = chordContent.split('\n');
 
             lines.forEach(line => {
-                if (!line.trim()) return;
+                const trimmedLine = line.trim();
+                if (!trimmedLine) return;
+
+                // --- TAB譜行の判定 (例: 1- 2- などで始まる、または TAB譜専用の識別子がある場合) ---
+                // ここでは、正規表現で「数字+[+-]」が含まれている行をTAB譜として判定します
+                if (/[1-6][+-]/.test(trimmedLine)) {
+                    renderTabBuffer(trimmedLine, previewArea);
+                    return;
+                }
+
+                // --- 通常のコード譜行の処理 ---
                 const lineDiv = document.createElement('div');
                 lineDiv.className = 'line-container';
                 const chordRow = document.createElement('div');
                 chordRow.className = 'chord-row';
 
+                // スペースで分割してループ
                 line.trim().split(/\s+/).forEach(name => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'chord-item';
-                    itemDiv.innerHTML = `<div class="chord-name">${name}</div>${createChordSVG(name)}`;
+
+                    if (name === '|') {
+                        // 小節線の処理
+                        itemDiv.innerHTML = `
+                                    <div style="width: 2px; height: 100%; background: #ddd; margin: 0 10px; min-height: 80px; align-self: stretch;"></div>
+                                `;
+                        itemDiv.style.display = "flex";
+                        itemDiv.style.alignItems = "center";
+                    } else {
+                        // 通常のコードの処理
+                        itemDiv.innerHTML = `<div class="chord-name">${name}</div>${createChordSVG(name)}`;
+                    }
                     chordRow.appendChild(itemDiv);
                 });
+
                 lineDiv.appendChild(chordRow);
                 previewArea.appendChild(lineDiv);
             });

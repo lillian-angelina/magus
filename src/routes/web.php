@@ -21,7 +21,7 @@ Route::get('/songs', [SongController::class, 'index'])->name('songs.index');
 // 新規作成エディタ
 Route::get('/songs/create', [SongController::class, 'create'])->name('songs.create');
 // 編集エディタ（ID指定）
-Route::get('/songs/{song}/edit', [SongController::class, 'edit'])->name('songs.editor');
+Route::get('/songs/{song}/edit', [SongController::class, 'edit'])->name('songs.edit');
 // 詳細・プレビュー画面（今回追加するもの）
 Route::get('/songs/{song}', [SongController::class, 'show'])->name('songs.show');
 // 保存・更新・削除
