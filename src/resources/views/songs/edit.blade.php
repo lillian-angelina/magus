@@ -2,12 +2,12 @@
 
 {{-- タイトル設定： songモデルがあればタイトルを、なければ「新規作成」を表示 --}}
 @section('title')
-    <title>Tab譜作成 - {{ $song->title ?? '新規作成' }}</title>
+    <title>ギターTab譜作成 - {{ $song->title ?? '新規作成' }}</title>
 @endsection
 
-{{-- CSS読み込み： 公開ディレクトリの css/tab.css を適用 --}}
+{{-- CSS読み込み： 公開ディレクトリの css/create-edit.css を適用 --}}
 @section('css')
-    <link rel="stylesheet" href="{{ asset('css/tab.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/create-edit.css') }}">
 @endsection
 
 {{-- メインコンテンツ --}}
@@ -21,30 +21,41 @@
         {{-- 上部操作バー： 保存、ダウンロード、スクロール設定など --}}
         <div class="controls-top">
             {{-- 曲名入力： 既存データがあれば value にセット --}}
-            <input type="text" id="song-title" placeholder="曲のタイトルを入力" value="{{ $song->title ?? '' }}"
-                style="padding: 10px; width: 300px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
+            <input class="song-title" type="text" id="song-title" placeholder="曲のタイトルを入力" value="{{ $song->title ?? '' }}">
 
             {{-- DB保存ボタン： $song->id の有無で「上書き」か「新規」かを動的に表示 --}}
-            <button onclick="saveToDB()" class="btn-save"
-                style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            <button onclick="saveToDB()" class="btn-save">
                 {{ isset($song->id) ? '上書き保存' : '新規保存' }}
             </button>
 
             {{-- PDF保存ボタン --}}
             <button onclick="downloadPDF()" class="btn-pdf">
-                PDFファイルをダウンロード
+                PDFファイルを保存
             </button>
 
             {{-- スクロール速度コントローラー --}}
-            <div
-                style="margin-left: 20px; display: flex; align-items: center; gap: 10px; background: #f0f0f0; padding: 5px 15px; border-radius: 20px;">
-                <span style="font-size: 12px; font-weight: bold;">スクロール速度</span>
-                <input type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1" value="1.0" style="cursor: pointer;">
-                <span id="speed-display" style="font-size: 12px; width: 30px;">x1.0</span>
+            <div class="scroll-speed-control">
+                <span class="scroll-speed-label">スクロール速度</span>
+                <input class="scroll-speed-slider" type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1"
+                    value="1.0">
+                <span class="speed-display" id="speed-display">x1.0</span>
             </div>
-            <span style="font-size: 12px; color: #888;">※プレビューをクリックで開始/停止</span>
 
-            <a href="{{ route('songs.index') }}" style="color: #666; text-decoration: none; margin-left: auto;">一覧に戻る</a>
+            {{-- メトロノームコントローラー --}}
+            <div class="metronome-control">
+                <span class="label-mn">メトロノーム</span>
+                <span class="label-bpm">BPM</span>
+                <input class="input-bpm" type="number" id="bpm" value="120" min="40" max="250">
+
+
+                <button id="metronome-toggle" onclick="toggleMetronome()" class="btn-metronome">
+                    START
+                </button>
+
+                <div id="tempo-lamp" class="lamp"></div>
+            </div>
+
+            <a class="btn-home" href="{{ route('songs.index') }}">一覧に戻る</a>
         </div>
 
         {{-- メインエディタエリア --}}
@@ -52,7 +63,7 @@
             {{-- 入力セクション： テキストエリアにコードを打ち込む --}}
             <div class="input-section">
                 <h2>コード譜エディタ</h2>
-                <p class="instruction" style="font-size: 0.9em; color: #666;">スペース区切りで入力。改行で次の段になります。</p>
+                <p class="instruction">スペース区切りで入力。改行で次の段になります。</p>
                 <textarea id="chord-input" placeholder="C G Am F">{{ $song->content ?? '' }}</textarea>
             </div>
 
@@ -410,42 +421,47 @@
 
         };
 
-        // --- ギターコードのSVG図形を生成するメイン関数 ---
+        // --- SVG（ベクトル画像）生成ロジック ---
+        // コード名を受け取り、chordLibのデータを基にギターの指板図(SVG)を作成して返す
         function createChordSVG(chordName) {
             const data = chordLib[chordName];
             if (!data) return `<div style="font-size:10px; color:#ccc;">No Data</div>`;
 
-            // 開始フレットの判定（ハイコードなどの場合に数値を調整）
+            // 開始フレットを計算（セーハがある場合はそこから、ない場合は一番低いフレットから）
             const startFret = data.barre ? data.barre : Math.min(...data.strings.filter(n => typeof n === 'number' && n > 0)) || 1;
             let elements = "";
 
-            // 6本の横線（弦）を描画
+            // ギターの弦（6本の横線）を描画
             for (let i = 0; i < 6; i++) {
                 const y = 20 + i * 10;
                 elements += `<line x1="25" y1="${y}" x2="95" y2="${y}" stroke="#ddd" stroke-width="1"/>`;
             }
-            // 5本の縦線（フレット）を描画
+            // フレット（5本の縦線）を描画
             for (let i = 0; i < 5; i++) {
                 const x = 25 + i * 17.5;
                 elements += `<line x1="${x}" y1="20" x2="${x}" y2="70" stroke="#ddd" stroke-width="1"/>`;
             }
-            // セーハ（人差し指でまとめて押さえる太線）がある場合の描画
+            // セーハ（人差し指で複数弦を押さえる太線）の描画
             if (data.barre) {
                 const bx = 25 + (17.5 / 2);
                 elements += `<line x1="${bx}" y1="20" x2="${bx}" y2="70" stroke="black" stroke-width="8" stroke-linecap="round"/>`;
             }
-            // 指の位置（黒丸）やミュート（×）などを描画
+            // 指の位置（黒丸）や開放弦(◯)、ミュート(×)の描画
             data.strings.forEach((f, i) => {
                 const y = 20 + i * 10;
-                if (f === "x") { elements += `<text x="5" y="${y + 4}" font-size="12" font-weight="bold">×</text>`; }
-                else if (f === 0) { elements += `<circle cx="12" cy="${y}" r="4" fill="none" stroke="black" stroke-width="1"/>`; }
-                else if (f !== data.barre) {
+                if (f === "x") {
+                    elements += `<text x="5" y="${y + 4}" font-size="12" font-weight="bold">×</text>`;
+                } else if (f === 0) {
+                    elements += `<circle cx="12" cy="${y}" r="4" fill="none" stroke="black" stroke-width="1"/>`;
+                } else if (f !== data.barre) {
                     const x = 25 + ((f - startFret + 1) * 17.5) - (17.5 / 2);
                     elements += `<circle cx="${x}" cy="${y}" r="4" fill="black"/>`;
                 }
             });
-            // 図の左側にフレット番号（3fなど）を表示
-            if (startFret > 0) { elements += `<text x="18" y="12" font-size="10" font-weight="bold">${startFret}</text>`; }
+            // 指板の左側にフレット番号（3、5など）を表示
+            if (startFret > 0) {
+                elements += `<text x="18" y="12" font-size="10" font-weight="bold">${startFret}</text>`;
+            }
             return `<svg class="chord-svg" viewBox="0 0 100 85">${elements}</svg>`;
         }
 
@@ -464,10 +480,10 @@
             }
 
             elements += `
-                    <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
-                    <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
-                    <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
-                `;
+                                                                                                        <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                                                                                                        <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                                                                                                        <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+                                                                                                    `;
 
             const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
             let noteCount = 0;
@@ -556,32 +572,40 @@
             });
         }
 
-        // --- データベース保存処理 (Laravelへの非同期リクエスト) ---
+        // TAB譜バッファを画面に描画する補助関数
+        function renderTabBuffer(buffer, container) {
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'line-container tab-container';
+            lineDiv.style.overflowX = 'auto';
+            lineDiv.innerHTML = createTabSVG(buffer);
+            container.appendChild(lineDiv);
+        }
+
+        // --- DB保存ロジック ---
+        // Fetch APIを使用して、Laravelのサーバー側（Controller）にデータを送信して保存する
         async function saveToDB() {
             const title = document.getElementById('song-title').value;
             const content = document.getElementById('chord-input').value;
             if (!title) { alert("タイトルを入力してください"); return; }
 
-            const isEdit = songId !== null;
-            const url = isEdit ? `/songs/${songId}` : '/songs';
-            const method = isEdit ? 'PUT' : 'POST'; // 既存なら更新、新規なら作成
+            const url = songId ? `/songs/${songId}` : '/songs';
+            const method = songId ? 'PUT' : 'POST';
 
             try {
                 const response = await fetch(url, {
                     method: method,
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Laravelセキュリティ対策用
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Laravelのセキュリティ対策用トークン
                     },
                     body: JSON.stringify({ title, content })
                 });
                 if (response.ok) {
-                    alert("保存が完了しました");
-                    if (!isEdit) window.location.href = '/songs';
-                } else {
-                    alert("保存に失敗しました");
+                    alert("保存しました！");
+                    if (!songId) window.location.href = '/songs';
                 }
-            } catch (error) { alert("通信エラーが発生しました"); }
+            } catch (error) { alert("保存に失敗しました"); }
         }
 
         // --- 改ページ位置の自動調整対応 PDFダウンロードロジック ---
@@ -645,55 +669,120 @@
             btn.disabled = false;
         }
 
-        // --- 自動スクロール制御ロジック ---
+        // --- メトロノーム用グローバル変数 ---
+        let audioContext = null;
+        let isMetronomeRunning = false;
+        let nextNoteTime = 0.0;
+        let timerID = null;
+
+        // メトロノームの関数定義
+        function toggleMetronome() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const btn = document.getElementById('metronome-toggle');
+            const tempoLamp = document.getElementById('tempo-lamp');
+
+            if (isMetronomeRunning) {
+                isMetronomeRunning = false;
+                cancelAnimationFrame(timerID);
+                btn.innerText = "START";
+                btn.classList.remove('running');
+                if (tempoLamp) tempoLamp.style.background = "#ddd";
+            } else {
+                isMetronomeRunning = true;
+                nextNoteTime = audioContext.currentTime;
+                btn.innerText = "STOP";
+                btn.classList.add('running');
+
+                function scheduler() {
+                    while (nextNoteTime < audioContext.currentTime + 0.1) {
+                        playMetronomeSound(nextNoteTime);
+                        updateLamp(nextNoteTime);
+                        const bpm = document.getElementById('bpm').value || 120;
+                        const secondsPerBeat = 60.0 / parseInt(bpm);
+                        nextNoteTime += secondsPerBeat;
+                    }
+                    timerID = requestAnimationFrame(scheduler);
+                }
+                scheduler();
+            }
+        }
+
+        function playMetronomeSound(time) {
+            const osc = audioContext.createOscillator();
+            const envelope = audioContext.createGain();
+            osc.frequency.value = 880;
+            envelope.gain.setValueAtTime(0.1, time);
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            osc.connect(envelope);
+            envelope.connect(audioContext.destination);
+            osc.start(time);
+            osc.stop(time + 0.05);
+        }
+
+        function updateLamp(time) {
+            const tempoLamp = document.getElementById('tempo-lamp');
+            if (!tempoLamp) return;
+            const diff = (time - audioContext.currentTime) * 1000;
+            setTimeout(() => {
+                tempoLamp.style.background = "#e74c3c";
+                setTimeout(() => { tempoLamp.style.background = "#ddd"; }, 50);
+            }, Math.max(0, diff));
+        }
+
+        window.onload = updatePreview;
+
+        // --- 自動スクロール機能（小数点対応版） ---
+        // 演奏中に画面を自動でスクロールさせる機能
         let isScrolling = false;
         let animationFrameId = null;
-        let currentScrollY = 0; // 0.1単位の細かい位置を追跡
+        let currentScrollY = 0; // 小数点レベルのスクロール位置を保持（なめらかさのため）
 
         const previewArea = document.getElementById('preview-area');
         const speedInput = document.getElementById('scroll-speed');
         const speedDisplay = document.getElementById('speed-display');
 
-        // 速度スライダー変更時に表示テキストを更新 (x1.0など)
+        // 速度スライダーを動かした時に倍率表示を更新
         speedInput.addEventListener('input', () => {
             speedDisplay.innerText = `x${parseFloat(speedInput.value).toFixed(1)}`;
         });
 
-        // スクロールを1ステップ進める再帰関数
+        // スクロールの実行ループ（ブラウザのリフレッシュレートに合わせて実行）
         function step() {
             if (!isScrolling) return;
 
             const speed = parseFloat(speedInput.value);
 
-            // スピード(0.1〜5.0)を内部カウンタに加算
+            // 内部的な位置を蓄積（0.1単位などの低速スクロールも正確に計算）
             currentScrollY += speed;
 
-            // 1ピクセル分溜まったら実際に画面を動かす
+            // 蓄積された値が1ピクセルを超えたとき、実際に画面をスクロール
             if (currentScrollY >= 1) {
                 const movePixels = Math.floor(currentScrollY);
                 window.scrollBy(0, movePixels);
-                currentScrollY -= movePixels; // 動いた分を差し引く
+                currentScrollY -= movePixels; // スクロール済みの整数分を引く
             }
 
-            // ページ下端に到達したら停止
+            // ページの最下部に達したら自動停止
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
                 stopAutoScroll();
                 return;
             }
 
-            // 次のフレーム(通常1/60秒後)にまた実行
             animationFrameId = requestAnimationFrame(step);
         }
 
-        // 開始：フラグを立ててアニメーションループを開始
+        // 自動スクロール開始処理
         function startAutoScroll() {
             isScrolling = true;
             currentScrollY = 0;
-            previewArea.style.boxShadow = "0 0 15px rgba(230, 126, 34, 0.5)"; // 動作中の光彩
+            previewArea.style.boxShadow = "0 0 15px rgba(230, 126, 34, 0.5)"; // 動作中の視覚効果
             animationFrameId = requestAnimationFrame(step);
         }
 
-        // 停止：フラグを下ろしてアニメーションをキャンセル
+        // 自動スクロール停止処理
         function stopAutoScroll() {
             isScrolling = false;
             previewArea.style.boxShadow = "0 0 10px rgba(0,0,0,0.05)";
@@ -702,9 +791,8 @@
             }
         }
 
-        // プレビューエリアをクリックした際の挙動
+        // プレビューエリアをクリックした時に開始/停止を切り替えるイベントリスナー
         previewArea.addEventListener('click', (e) => {
-            // ボタンやスライダーのクリック時は反応させない
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
             if (isScrolling) {
                 stopAutoScroll();
@@ -713,12 +801,12 @@
             }
         });
 
-        // --- イベントリスナーの設定 ---
-        // タイトルやコード入力が変更されるたびに自動でプレビューを更新
+        // --- 各種イベントリスナー ---
+        // 入力が書き換わるたびにプレビューを即座に更新する
         document.getElementById('chord-input').addEventListener('input', updatePreview);
         document.getElementById('song-title').addEventListener('input', updatePreview);
 
-        // 画面読み込み完了時に最初のプレビューを実行
-        document.addEventListener('DOMContentLoaded', updatePreview);
+        // ページ読み込み完了時に最初のプレビューを表示
+        window.onload = updatePreview;
     </script>
 @endsection

@@ -2,15 +2,15 @@
 
 {{-- タイトルセクション：ブラウザのタブに表示されるタイトルを設定 --}}
 @section('title')
-    <title>Tab譜作成 - {{ $song->title ?? '新規作成' }}</title>
+    <title>ギターTab譜作成 - {{ $song->title ?? '新規作成' }}</title>
 @endsection
 
 {{-- CSSセクション：このページ専用のスタイルシートを読み込み --}}
 @section('css')
-    <link rel="stylesheet" href="{{ asset('css/tab.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/create-edit.css') }}">
 @endsection
 
-{{-- メインコンテンツセクション --}}
+{{-- メインコンテンツ --}}
 @section('content')
     {{-- 外部ライブラリの読み込み --}}
     {{-- html2canvas: HTML要素を画像（Canvas）に変換する --}}
@@ -19,46 +19,53 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <div class="contents">
-        {{-- 上部コントロールパネル：タイトル入力、保存、PDF保存、スクロール設定 --}}
+        {{-- 上部コントロールパネル --}}
         <div class="controls-top">
-            {{-- 曲名入力欄：新規なら空、編集なら既存のタイトルを表示 --}}
-            <input type="text" id="song-title" placeholder="曲のタイトルを入力" value="{{ $song->title ?? '' }}"
-                style="padding: 10px; width: 300px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
+            <input class="song-title" type="text" id="song-title" placeholder="曲のタイトルを入力" value="{{ $song->title ?? '' }}">
 
-            {{-- DB保存ボタン：データの有無によって表示テキストを切り替え --}}
-            <button onclick="saveToDB()" class="btn-save"
-                style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            {{-- DB保存ボタン： $song->id の有無で「上書き」か「新規」かを動的に表示 --}}
+            <button onclick="saveToDB()" class="btn-save">
                 {{ isset($song->id) ? '上書き保存' : '新規保存' }}
             </button>
 
-            {{-- PDF生成・ダウンロードボタン --}}
+            {{-- PDF保存ボタン --}}
             <button onclick="downloadPDF()" class="btn-pdf">
-                PDFファイルをダウンロード
+                PDFファイルを保存
             </button>
 
-            {{-- 自動スクロールの速度調整用スライダー --}}
+            {{-- スクロール速度コントローラー --}}
             <div class="scroll-speed-control">
-                <span style="font-size: 12px; font-weight: bold;">スクロール速度</span>
-                <input type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1" value="1.0" style="cursor: pointer;">
-                <span id="speed-display" style="font-size: 12px; width: 30px;">x1.0</span>
+                <span class="scroll-speed-label">スクロール速度</span>
+                <input class="scroll-speed-slider" type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1"
+                    value="1.0">
+                <span class="speed-display" id="speed-display">x1.0</span>
             </div>
-            <span style="font-size: 12px; color: #888;">※プレビューをクリックで開始/停止</span>
 
-            {{-- 一覧画面への戻るリンク --}}
-            <a href="{{ route('songs.index') }}" style="color: #666; text-decoration: none; margin-left: auto;">一覧に戻る</a>
+            {{-- メトロノームコントローラー --}}
+            <div class="metronome-control">
+                <span class="label-mn">メトロノーム</span>
+                <span class="label-bpm">BPM</span>
+                <input class="input-bpm" type="number" id="bpm" value="120" min="40" max="250">
+
+                <button id="metronome-toggle" onclick="toggleMetronome()" class="btn-metronome">
+                    START
+                </button>
+
+                <div id="tempo-lamp" class="lamp"></div>
+            </div>
+
+            <a href="{{ route('songs.index') }}" class="link-back">一覧に戻る</a>
         </div>
 
-        {{-- エディター本体：入力エリアとプレビューエリア --}}
         <div class="editor-container">
-            {{-- 左側：コード譜入力エリア --}}
+            {{-- 左側：入力エリア --}}
             <div class="input-section">
                 <h2>コード譜エディタ</h2>
-                <p class="instruction" style="font-size: 0.9em; color: #666;">スペース区切りで入力。改行で次の段になります。</p>
-                {{-- 既存の曲データがあればその内容を表示 --}}
+                <p class="instruction">スペース区切りで入力。改行で次の段になります。</p>
                 <textarea id="chord-input" placeholder="C G Am F">{{ $song->content ?? '' }}</textarea>
             </div>
 
-            {{-- 右側：描画されたコード図が表示されるプレビューエリア --}}
+            {{-- 右側：プレビューエリア --}}
             <div class="preview-section-container">
                 <h2>プレビュー</h2>
                 <div id="preview-area"></div>
@@ -468,9 +475,9 @@
             }
 
             elements += `
-                <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
-                <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
-                <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+                            <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                            <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                            <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
             `;
 
             const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
@@ -571,7 +578,6 @@
 
         // --- DB保存ロジック ---
         // Fetch APIを使用して、Laravelのサーバー側（Controller）にデータを送信して保存する
-        const songId = @json($song->id ?? null); // 編集時は既存ID、新規時はnull
         async function saveToDB() {
             const title = document.getElementById('song-title').value;
             const content = document.getElementById('chord-input').value;
@@ -656,6 +662,69 @@
 
             btn.innerText = "PDFファイルをダウンロード";
             btn.disabled = false;
+        }
+
+        // --- メトロノーム用グローバル変数 ---
+        let audioContext = null;
+        let isMetronomeRunning = false;
+        let nextNoteTime = 0.0;
+        let timerID = null;
+
+        // メトロノームの関数定義
+        function toggleMetronome() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const btn = document.getElementById('metronome-toggle');
+            const tempoLamp = document.getElementById('tempo-lamp');
+
+            if (isMetronomeRunning) {
+                isMetronomeRunning = false;
+                cancelAnimationFrame(timerID);
+                btn.innerText = "START";
+                btn.classList.remove('running');
+                if (tempoLamp) tempoLamp.style.background = "#ddd";
+            } else {
+                isMetronomeRunning = true;
+                nextNoteTime = audioContext.currentTime;
+                btn.innerText = "STOP";
+                btn.classList.add('running');
+
+                function scheduler() {
+                    while (nextNoteTime < audioContext.currentTime + 0.1) {
+                        playMetronomeSound(nextNoteTime);
+                        updateLamp(nextNoteTime);
+                        const bpm = document.getElementById('bpm').value || 120;
+                        const secondsPerBeat = 60.0 / parseInt(bpm);
+                        nextNoteTime += secondsPerBeat;
+                    }
+                    timerID = requestAnimationFrame(scheduler);
+                }
+                scheduler();
+            }
+        }
+
+        function playMetronomeSound(time) {
+            const osc = audioContext.createOscillator();
+            const envelope = audioContext.createGain();
+            osc.frequency.value = 880;
+            envelope.gain.setValueAtTime(0.1, time);
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            osc.connect(envelope);
+            envelope.connect(audioContext.destination);
+            osc.start(time);
+            osc.stop(time + 0.05);
+        }
+
+        function updateLamp(time) {
+            const tempoLamp = document.getElementById('tempo-lamp');
+            if (!tempoLamp) return;
+            const diff = (time - audioContext.currentTime) * 1000;
+            setTimeout(() => {
+                tempoLamp.style.background = "#e74c3c";
+                setTimeout(() => { tempoLamp.style.background = "#ddd"; }, 50);
+            }, Math.max(0, diff));
         }
 
         // --- 自動スクロール機能（小数点対応版） ---

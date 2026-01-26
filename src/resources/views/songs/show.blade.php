@@ -16,11 +16,21 @@
         <div class="controls-view">
             <a href="{{ route('songs.index') }}" style="text-decoration: none; color: #424ef8;">← 戻る</a>
 
-            <div
-                style="display: flex; align-items: center; gap: 10px; background: #f0f0f0; padding: 5px 15px; border-radius: 20px;">
+            <div style="align-items: center; gap: 10px; background: #f0f0f0; padding: 5px 15px; border-radius: 20px;">
                 <span style="font-size: 12px; font-weight: bold;">スクロール速度</span>
                 <input type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1" value="1.0">
                 <span id="speed-display" style="font-size: 12px; width: 30px;">x1.0</span>
+            </div>
+
+            <div class="metronome-control">
+                <span class="label-mn">メトロノーム</span>
+                <span class="label-bpm">BPM</span>
+                <input class="input-bpm" type="number" id="bpm" value="120" min="40" max="250">
+
+                <button id="metronome-toggle" onclick="toggleMetronome()" class="btn-metronome">
+                    START
+                </button>
+
             </div>
 
         </div>
@@ -424,10 +434,10 @@
             }
 
             elements += `
-                    <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
-                    <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
-                    <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
-                    `;
+                                        <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                                        <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                                        <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+                        `;
 
             const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
             let noteCount = 0;
@@ -455,7 +465,8 @@
                 noteCount++;
             });
 
-return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; display:block; background:#fff; padding:10px 0;">${elements}</svg>`;}
+            return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; display:block; background:#fff; padding:10px 0;">${elements}</svg>`;
+        }
 
         // TAB譜バッファを画面に描画する補助関数
         function renderTabBuffer(buffer, container) {
@@ -497,8 +508,8 @@ return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet
                     if (name === '|') {
                         // 小節線の処理
                         itemDiv.innerHTML = `
-                                    <div style="width: 2px; height: 100%; background: #ddd; margin: 0 10px; min-height: 80px; align-self: stretch;"></div>
-                                `;
+                                            <div style="width: 2px; height: 100%; background: #ddd; margin: 0 10px; min-height: 80px; align-self: stretch;"></div>
+                                 `;
                         itemDiv.style.display = "flex";
                         itemDiv.style.alignItems = "center";
                     } else {
@@ -511,6 +522,69 @@ return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet
                 lineDiv.appendChild(chordRow);
                 previewArea.appendChild(lineDiv);
             });
+        }
+
+        // --- メトロノーム用グローバル変数 ---
+        let audioContext = null;
+        let isMetronomeRunning = false;
+        let nextNoteTime = 0.0;
+        let timerID = null;
+
+        // メトロノームの関数定義
+        function toggleMetronome() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const btn = document.getElementById('metronome-toggle');
+            const tempoLamp = document.getElementById('tempo-lamp');
+
+            if (isMetronomeRunning) {
+                isMetronomeRunning = false;
+                cancelAnimationFrame(timerID);
+                btn.innerText = "START";
+                btn.classList.remove('running');
+                if (tempoLamp) tempoLamp.style.background = "#ddd";
+            } else {
+                isMetronomeRunning = true;
+                nextNoteTime = audioContext.currentTime;
+                btn.innerText = "STOP";
+                btn.classList.add('running');
+
+                function scheduler() {
+                    while (nextNoteTime < audioContext.currentTime + 0.1) {
+                        playMetronomeSound(nextNoteTime);
+                        updateLamp(nextNoteTime);
+                        const bpm = document.getElementById('bpm').value || 120;
+                        const secondsPerBeat = 60.0 / parseInt(bpm);
+                        nextNoteTime += secondsPerBeat;
+                    }
+                    timerID = requestAnimationFrame(scheduler);
+                }
+                scheduler();
+            }
+        }
+
+        function playMetronomeSound(time) {
+            const osc = audioContext.createOscillator();
+            const envelope = audioContext.createGain();
+            osc.frequency.value = 880;
+            envelope.gain.setValueAtTime(0.1, time);
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            osc.connect(envelope);
+            envelope.connect(audioContext.destination);
+            osc.start(time);
+            osc.stop(time + 0.05);
+        }
+
+        function updateLamp(time) {
+            const tempoLamp = document.getElementById('tempo-lamp');
+            if (!tempoLamp) return;
+            const diff = (time - audioContext.currentTime) * 1000;
+            setTimeout(() => {
+                tempoLamp.style.background = "#e74c3c";
+                setTimeout(() => { tempoLamp.style.background = "#ddd"; }, 50);
+            }, Math.max(0, diff));
         }
 
         // --- 自動スクロール機能 (エディタと同じもの) ---
