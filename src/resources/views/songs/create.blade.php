@@ -54,7 +54,7 @@
                 <div id="tempo-lamp" class="lamp"></div>
             </div>
 
-            <a href="{{ route('songs.index') }}" class="link-back">一覧に戻る</a>
+            <a class="btn-home" href="{{ route('songs.index') }}">一覧に戻る</a>
         </div>
 
         <div class="editor-container">
@@ -475,10 +475,10 @@
             }
 
             elements += `
-                            <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
-                            <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
-                            <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
-            `;
+                                    <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                                    <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                                    <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+                    `;
 
             const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
             let noteCount = 0;
@@ -509,8 +509,8 @@
             return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMin meet" style="width:100%; height:auto; display:block; background:#fff; padding:10px;">${elements}</svg>`;
         }
 
-        // --- リアルタイムプレビュー更新 ---
         // 入力エリアのテキストを解析し、タイトルと全てのコード図をプレビューエリアに描画する
+        // --- リアルタイムプレビュー更新（動的サイズ対応版） ---
         function updatePreview() {
             const titleInput = document.getElementById('song-title').value;
             const chordInput = document.getElementById('chord-input').value;
@@ -518,6 +518,7 @@
 
             previewArea.innerHTML = '';
 
+            // タイトル生成（省略：既存のコードと同じ）
             const titleEl = document.createElement('h1');
             titleEl.style.textAlign = 'center';
             titleEl.style.marginBottom = '40px';
@@ -534,28 +535,32 @@
                 previewArea.appendChild(lineDiv);
 
                 if (trimmedLine.startsWith('-')) {
+                    // TAB譜生成（省略：既存のコードと同じ）
                     const tabData = trimmedLine.replace(/^-/, '').trim();
                     lineDiv.innerHTML = createTabSVG(tabData);
                 } else {
                     const chordRow = document.createElement('div');
                     chordRow.className = 'chord-row';
-                    chordRow.style.display = 'flex';
-                    chordRow.style.alignItems = 'center'; // 垂直中央揃え
-                    chordRow.style.flexWrap = 'wrap';
+
+                    // --- ここから動的サイズの判定ロジック ---
+                    const chordNames = trimmedLine.split(/\s+/).filter(name => name && name !== '|');
+                    const chordCount = chordNames.length;
+
+                    // コード数に応じてクラスを付与
+                    if (chordCount >= 5) {
+                        chordRow.classList.add('row-5-cols');
+                    } else if (chordCount === 4) {
+                        chordRow.classList.add('row-4-cols');
+                    }
+                    // --------------------------------------
 
                     trimmedLine.split(/\s+/).forEach(name => {
                         if (!name) return;
-
                         if (name === '|') {
-                            // 小節線の描画
                             const bar = document.createElement('div');
-                            bar.style.width = '2px';
-                            bar.style.height = '80px';
-                            bar.style.backgroundColor = '#ddd';
-                            bar.style.margin = '0 15px';
+                            bar.className = 'bar-line'; // クラス化してCSSで制御
                             chordRow.appendChild(bar);
                         } else {
-                            // 通常のコード図
                             const itemDiv = document.createElement('div');
                             itemDiv.className = 'chord-item';
                             itemDiv.innerHTML = `<div class="chord-name">${name}</div>${createChordSVG(name)}`;
@@ -583,8 +588,9 @@
             const content = document.getElementById('chord-input').value;
             if (!title) { alert("タイトルを入力してください"); return; }
 
-            const url = songId ? `/songs/${songId}` : '/songs';
-            const method = songId ? 'PUT' : 'POST';
+            // songId が null または undefined でないかチェック
+            const url = (typeof songId !== 'undefined' && songId) ? `/songs/${songId}` : '/songs';
+            const method = (typeof songId !== 'undefined' && songId) ? 'PUT' : 'POST';
 
             try {
                 const response = await fetch(url, {
@@ -592,15 +598,25 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}' // Laravelのセキュリティ対策用トークン
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({ title, content })
                 });
+
                 if (response.ok) {
                     alert("保存しました！");
-                    if (!songId) window.location.href = '/songs';
+                    // 新規保存時は一覧画面へ、更新時はそのまま
+                    if (method === 'POST') {
+                        window.location.href = '/songs';
+                    }
+                } else {
+                    const errorData = await response.json();
+                    alert("保存に失敗しました: " + (errorData.message || "サーバーエラー"));
                 }
-            } catch (error) { alert("保存に失敗しました"); }
+            } catch (error) {
+                console.error(error);
+                alert("通信エラーが発生しました");
+            }
         }
 
         // --- 改ページ位置の自動調整対応 PDFダウンロードロジック ---

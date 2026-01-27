@@ -34,7 +34,7 @@ class SongController extends Controller
     {
         // 新規作成時は $song が存在しないため、空のモデルを渡すとビューでエラーが出ません
         $song = new Song();
-        return view('songs.edit', compact('song'));
+        return view('songs.create', compact('song'));
     }
 
     // 編集画面表示

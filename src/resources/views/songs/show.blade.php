@@ -16,12 +16,15 @@
         <div class="controls-view">
             <a href="{{ route('songs.index') }}" style="text-decoration: none; color: #424ef8;">← 戻る</a>
 
-            <div style="align-items: center; gap: 10px; background: #f0f0f0; padding: 5px 15px; border-radius: 20px;">
-                <span style="font-size: 12px; font-weight: bold;">スクロール速度</span>
-                <input type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1" value="1.0">
-                <span id="speed-display" style="font-size: 12px; width: 30px;">x1.0</span>
+            {{-- スクロール速度コントローラー --}}
+            <div class="scroll-speed-control">
+                <span class="scroll-speed-label">スクロール速度</span>
+                <input class="scroll-speed-slider" type="range" id="scroll-speed" min="0.1" max="5.0" step="0.1"
+                    value="1.0">
+                <span class="speed-display" id="speed-display">x1.0</span>
             </div>
 
+            {{-- メトロノームコントローラー --}}
             <div class="metronome-control">
                 <span class="label-mn">メトロノーム</span>
                 <span class="label-bpm">BPM</span>
@@ -30,7 +33,6 @@
                 <button id="metronome-toggle" onclick="toggleMetronome()" class="btn-metronome">
                     START
                 </button>
-
             </div>
 
         </div>
@@ -434,10 +436,10 @@
             }
 
             elements += `
-                                        <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
-                                        <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
-                                        <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
-                        `;
+                                                            <text x="5" y="${startY + 22}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">T</text>
+                                                            <text x="5" y="${startY + 42}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">A</text>
+                                                            <text x="5" y="${startY + 62}" font-family="Arial" font-size="20" font-weight="bold" fill="#444">B</text>
+                                            `;
 
             const notes = tabInput.trim().split(/\s+/).filter(n => n.length > 0);
             let noteCount = 0;
@@ -487,33 +489,35 @@
                 const trimmedLine = line.trim();
                 if (!trimmedLine) return;
 
-                // --- TAB譜行の判定 (例: 1- 2- などで始まる、または TAB譜専用の識別子がある場合) ---
-                // ここでは、正規表現で「数字+[+-]」が含まれている行をTAB譜として判定します
                 if (/[1-6][+-]/.test(trimmedLine)) {
                     renderTabBuffer(trimmedLine, previewArea);
                     return;
                 }
 
-                // --- 通常のコード譜行の処理 ---
                 const lineDiv = document.createElement('div');
                 lineDiv.className = 'line-container';
                 const chordRow = document.createElement('div');
                 chordRow.className = 'chord-row';
 
-                // スペースで分割してループ
-                line.trim().split(/\s+/).forEach(name => {
+                // --- コード数をカウントしてクラスを付与 ---
+                const chordNames = trimmedLine.split(/\s+/).filter(name => name && name !== '|');
+                const chordCount = chordNames.length;
+                if (chordCount >= 5) {
+                    chordRow.classList.add('row-5-cols');
+                } else if (chordCount === 4) {
+                    chordRow.classList.add('row-4-cols');
+                }
+                // --------------------------------------
+
+                trimmedLine.split(/\s+/).forEach(name => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'chord-item';
 
                     if (name === '|') {
-                        // 小節線の処理
-                        itemDiv.innerHTML = `
-                                            <div style="width: 2px; height: 100%; background: #ddd; margin: 0 10px; min-height: 80px; align-self: stretch;"></div>
-                                 `;
-                        itemDiv.style.display = "flex";
-                        itemDiv.style.alignItems = "center";
+                        // 小節線のクラスを付与
+                        itemDiv.className = 'chord-item bar-item';
+                        itemDiv.innerHTML = `<div class="bar-line"></div>`;
                     } else {
-                        // 通常のコードの処理
                         itemDiv.innerHTML = `<div class="chord-name">${name}</div>${createChordSVG(name)}`;
                     }
                     chordRow.appendChild(itemDiv);
@@ -587,48 +591,79 @@
             }, Math.max(0, diff));
         }
 
-        // --- 自動スクロール機能 (エディタと同じもの) ---
+        // --- 自動スクロール機能（小数点対応版） ---
+        // 演奏中に画面を自動でスクロールさせる機能
         let isScrolling = false;
         let animationFrameId = null;
         let currentScrollY = 0;
+
         const speedInput = document.getElementById('scroll-speed');
         const speedDisplay = document.getElementById('speed-display');
 
-        speedInput.addEventListener('input', () => {
-            speedDisplay.innerText = `x${parseFloat(speedInput.value).toFixed(1)}`;
-        });
-
-        function step() {
-            if (!isScrolling) return;
-            const speed = parseFloat(speedInput.value);
-            currentScrollY += speed;
-            if (currentScrollY >= 1) {
-                const move = Math.floor(currentScrollY);
-                window.scrollBy(0, move);
-                currentScrollY -= move;
+        // 1. まず関数を定義する
+        function stopAutoScroll() {
+            isScrolling = false;
+            const previewArea = document.getElementById('preview-area');
+            previewArea.style.boxShadow = "0 0 10px rgba(0,0,0,0.05)";
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
             }
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
-                stopAutoScroll();
-                return;
-            }
-            animationFrameId = requestAnimationFrame(step);
         }
 
         function startAutoScroll() {
             isScrolling = true;
             currentScrollY = 0;
-            document.getElementById('preview-area').style.boxShadow = "0 0 15px rgba(230, 126, 34, 0.5)";
+            const previewArea = document.getElementById('preview-area');
+            previewArea.style.boxShadow = "0 0 15px rgba(230, 126, 34, 0.5)";
             animationFrameId = requestAnimationFrame(step);
         }
 
-        function stopAutoScroll() {
-            isScrolling = false;
-            document.getElementById('preview-area').style.boxShadow = "0 0 10px rgba(0,0,0,0.05)";
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        function step() {
+            if (!isScrolling) return;
+
+            const speed = parseFloat(speedInput.value);
+            currentScrollY += speed;
+
+            if (currentScrollY >= 1) {
+                const movePixels = Math.floor(currentScrollY);
+                window.scrollBy(0, movePixels);
+                currentScrollY -= movePixels;
+            }
+
+            // 最下部判定
+            const isAtBottom = (window.innerHeight + window.pageYOffset) >= (document.documentElement.scrollHeight - 2);
+            if (isAtBottom) {
+                stopAutoScroll();
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(step);
         }
 
-        document.getElementById('preview-area').addEventListener('click', () => {
-            if (isScrolling) stopAutoScroll(); else startAutoScroll();
+        // 2. その後でイベントリスナーを登録する
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPreview(); // プレビュー描画
+
+            const previewArea = document.getElementById('preview-area');
+            previewArea.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('input')) return;
+
+                const isAtBottom = (window.innerHeight + window.pageYOffset) >= (document.documentElement.scrollHeight - 2);
+
+                if (isScrolling) {
+                    stopAutoScroll();
+                } else {
+                    // 最下部でなければ開始
+                    if (!isAtBottom) {
+                        startAutoScroll();
+                    }
+                }
+            });
+        });
+
+        // スピード表示の更新
+        speedInput.addEventListener('input', () => {
+            speedDisplay.innerText = `x${parseFloat(speedInput.value).toFixed(1)}`;
         });
 
         // 初期実行

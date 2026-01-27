@@ -229,3 +229,31 @@ textarea {
         display: none !important;
     }
 }
+
+/* --- モバイル専用設定（画面幅768px以下 = iPad/iPhone） --- */
+@media (max-width: 768px) {
+    .editor-container {
+        flex-direction: column; /* 縦並びにする */
+    }
+
+    .input-section {
+        order: 2; /* 入力欄を下に */
+    }
+
+    .preview-section-container {
+        order: 1; /* プレビューを上にして、見ながら入力しやすくする */
+        width: 100%;
+        overflow-x: auto; /* 譜面がはみ出た時に横スクロール可能に */
+    }
+
+    /* テキストエリアの高さ調整 */
+    #chord-input {
+        height: 200px;
+        font-size: 16px; /* iPhoneで入力時にズームされるのを防ぐため16px以上を推奨 */
+    }
+
+    .btn-save, .btn-pdf {
+        flex: 1; /* ボタンを横いっぱいに広げる */
+        padding: 12px;
+    }
+}

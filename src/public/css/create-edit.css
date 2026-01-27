@@ -32,10 +32,10 @@ header {
 
 .song-title {
     padding: 10px;
-    width: 300px;
+    width: 100%;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 1.2rem;
 }
 
 header .home {
@@ -60,7 +60,9 @@ header .home {
 
 .editor-container {
     display: flex;
+    flex-wrap: wrap;    /* 画面が狭いと折り返すように設定 */
     gap: 20px;
+    align-items: flex-start;
     max-width: 1200px;
     margin: 0 auto;
 }
@@ -98,31 +100,6 @@ textarea {
     padding-bottom: 10px;
 }
 
-.chord-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.chord-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100px;
-}
-
-.chord-name {
-    font-weight: bold;
-    font-size: 14px;
-    margin-bottom: 4px;
-    height: 1.5em;
-}
-
-.chord-svg {
-    width: 90px;
-    height: 75px;
-}
-
 .instruction {
     font-size: 12px;
     color: #666;
@@ -138,22 +115,21 @@ textarea {
 .controls-top {
     margin-bottom: 20px;
     display: flex;
+    flex-wrap: wrap;
     gap: 15px;
     align-items: center;
     background: #fff;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.editor-container {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
+    position: sticky; /* モバイルでは操作パネルを上に固定すると便利 */
+    z-index: 100;
+    top: 0;
 }
 
 .input-section {
     flex: 1;
+    min-width: 300px;   /* 最小幅を決めておく */
     position: sticky;
     top: 20px;
 }
@@ -174,6 +150,7 @@ textarea {
     background: #f9f9f9;
     padding: 20px;
     border-radius: 8px;
+    min-width: 300px;   /* 最小幅を決めておく */
 }
 
 #preview-area {
@@ -193,15 +170,44 @@ textarea {
     padding-bottom: 20px;
 }
 
+/* 行全体のスタイル */
 .chord-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
+    flex-wrap: nowrap;
+    /* 左寄せにすることで、4個と5個でコードの開始位置が揃います */
+    justify-content: flex-start; 
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+    gap: 2%; /* コード同士の間の余白を固定 */
 }
 
+/* コードアイテムのサイズを固定して統一 */
 .chord-item {
     text-align: center;
-    width: 100px;
+    /* 5個並んだ時に一番ちょうど良い「固定幅」を指定します */
+    /* iPhone XR(414px)基準だと 18%〜19% くらいが理想的です */
+    flex: 0 0 18%; 
+    max-width: 18%;
+}
+
+/* SVG自体の最大サイズを制限（これで大きさが揃います） */
+.chord-svg {
+    width: 100%;
+    /* 4個の時にSVGが巨大化しないよう、pxで上限を決めるとより確実です */
+    max-width: 65px; 
+    height: auto;
+    margin: 0 auto;
+    display: block;
+}
+
+/* 小節線の調整 */
+.bar-line {
+    width: 2px;
+    height: 50px;
+    background-color: #ddd;
+    margin: 0 5px;
+    flex-shrink: 0;
 }
 
 .chord-name {
@@ -209,11 +215,6 @@ textarea {
     font-size: 16px;
     margin-bottom: 8px;
     color: #333;
-}
-
-.chord-svg {
-    width: 90px;
-    height: 80px;
 }
 
 /* PDF出力ボタン */
@@ -242,6 +243,8 @@ textarea {
 
 /* スクロール速度コントローラー */
 .scroll-speed-control {
+    display: flex;
+    align-items: center;
     margin-left: 20px;
     background: #f0f0f0;
     padding: 5px 15px;
@@ -264,6 +267,8 @@ textarea {
 
 /* メトロノームコントローラー */
 .metronome-control {
+    display: flex;
+    align-items: center;
     text-align: center;
     background: #f0f0f0;
     padding: 5px 15px;
@@ -313,5 +318,33 @@ textarea {
     h2,
     .instruction {
         display: none !important;
+    }
+}
+
+/* --- モバイル専用設定（画面幅768px以下 = iPad/iPhone） --- */
+@media (max-width: 768px) {
+    .editor-container {
+        flex-direction: column; /* 縦並びにする */
+    }
+
+    .input-section {
+        order: 2; /* 入力欄を下に */
+    }
+
+    .preview-section-container {
+        order: 1; /* プレビューを上にして、見ながら入力しやすくする */
+        width: 100%;
+        overflow-x: auto; /* 譜面がはみ出た時に横スクロール可能に */
+    }
+
+    /* テキストエリアの高さ調整 */
+    #chord-input {
+        height: 200px;
+        font-size: 16px; /* iPhoneで入力時にズームされるのを防ぐため16px以上を推奨 */
+    }
+
+    .btn-save, .btn-pdf {
+        flex: 1; /* ボタンを横いっぱいに広げる */
+        padding: 12px;
     }
 }
